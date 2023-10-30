@@ -1,0 +1,2 @@
+login_manger.required="You must enter username and password"
+login_manager.login_message_category = "info"

@@ -1,0 +1,2 @@
+login_manger.required="用户名和密码不能为空"
+login_manager.login_message_category = "info"
