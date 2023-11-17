@@ -10,8 +10,15 @@
  */
 package routes
 
-import "github.com/gin-gonic/gin"
+import (
+	"mmserver/controllers"
+
+	"github.com/gin-gonic/gin"
+)
+
+var SysController controllers.SysController
 
 func InitAdminRouterGroup(r *gin.RouterGroup) {
 
+	r.POST("/shelf/autoadd", SysController.AddShelfByRule)
 }

@@ -19,7 +19,7 @@ import (
 )
 
 type AvalonMiner struct {
-	TMiner
+	Miner
 }
 
 func NewAvalonMinerClient() *AvalonMiner {

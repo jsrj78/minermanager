@@ -51,13 +51,13 @@ var (
 )
 
 type AntMiner struct {
-	TMiner
+	Miner
 }
 
-func NewAntMinerClient(m *TMiner) *AntMiner {
+func NewAntMinerClient(m *Miner) *AntMiner {
 
 	antMiner := &AntMiner{}
-	antMiner.TMiner = *m
+	antMiner.Miner = *m
 	fmt.Println("user,password", antMiner.UserName, antMiner.Password)
 	antMiner.RequestClient = http.Client{Transport: &digest.Transport{
 		Username: antMiner.UserName,
@@ -84,11 +84,11 @@ func (ant *AntMiner) Login() bool {
 
 	// 使用json.Unmarshal解码JSON响应并将其赋值给结构体
 	decoder := json.NewDecoder(res.Body)
-	if err := decoder.Decode(&ant.TMiner); err != nil {
+	if err := decoder.Decode(&ant.Miner); err != nil {
 		fmt.Println("JSON解码失败:", err)
 		return false
 	}
-	fmt.Println(ant.TMiner.Ip, ant.TMiner.Gateway)
+	fmt.Println(ant.Miner.Ip, ant.Miner.Gateway)
 
 	return true
 }

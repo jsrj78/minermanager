@@ -24,7 +24,7 @@ type MinerService struct {
 
 // StartMiner
 func (ms *MinerService) LoadMinerAndStart() error {
-	miners := []*models.TMiner{}
+	miners := []*models.Miner{}
 	//1. 获取所有矿机
 	if err := utils.DB.Where("status = ? or status = ? ", models.MinerOffline, models.MinerOnline).Find(&miners).Error; err == nil {
 		f := models.NewMinerFactory()
@@ -58,6 +58,9 @@ func (ms *MinerService) LoadMinerAndStart() error {
 	return nil
 
 }
+
+
+/**************************以下是数据库操作部分*************************/
 
 // CreateMiner
 func (ms *MinerService) CreateMiner(miner models.TMiner) (*models.TMiner, error) {

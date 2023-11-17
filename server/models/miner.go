@@ -182,7 +182,7 @@ type Pools struct {
 	MinerId uuid.UUID `json:"minerId" gorm:"column:miner_id"` //矿机ID
 }
 
-type TMiner struct {
+type Miner struct {
 	Id    uuid.UUID  `json:"id" gorm:"column:id"`       //矿机ID
 	Brand MinerBrand `json:"brand" gorm:"column:brand"` //矿机品牌
 	Model string     `json:"model" gorm:"column:model"` //矿机类型
@@ -255,12 +255,12 @@ var instanceMinerFactory *MinerFactory
 var onceMinerFactory sync.Once
 
 type MinerFactory struct {
-	Miners             map[uuid.UUID]*TMiner
+	Miners             map[uuid.UUID]*Miner
 	MinerStatusManager *MinerStatusManager
 }
 
 // 执行这个ping函数需要root或管理员权限
-func (miner *TMiner) Ping() bool {
+func (miner *Miner) Ping() bool {
 	ctx := context.Background()
 	limiter.Wait(ctx)
 
@@ -283,17 +283,17 @@ func (miner *TMiner) Ping() bool {
 	}
 }
 
-func (miner *TMiner) Login() bool {
+func (miner *Miner) Login() bool {
 	return true
 }
 
-func (miner *TMiner) Reboot() {
+func (miner *Miner) Reboot() {
 	fmt.Println("base miner reboot")
 }
 
-func (miner *TMiner) Run(manager *MinerStatusManager) {
+func (miner *Miner) Run(manager *MinerStatusManager) {
 	//fmt.Println("miner run", miner.Ip)
-	go func(miner *TMiner) {
+	go func(miner *Miner) {
 		ticker := time.NewTicker(pingInterval)
 		defer ticker.Stop()
 
@@ -333,7 +333,7 @@ func NewMinerManager() *MinerStatusManager {
 	return instanceMinerStatus
 }
 
-func (manager *MinerStatusManager) ChangeState(miner *TMiner, status MinerStatus) {
+func (manager *MinerStatusManager) ChangeState(miner *Miner, status MinerStatus) {
 	manager.Mux.Lock()
 	defer manager.Mux.Unlock()
 
@@ -358,14 +358,14 @@ func (manager *MinerStatusManager) ChangeState(miner *TMiner, status MinerStatus
 func NewMinerFactory() *MinerFactory {
 	onceMinerFactory.Do(func() {
 		instanceMinerFactory = &MinerFactory{
-			Miners:             make(map[uuid.UUID]*TMiner),
+			Miners:             make(map[uuid.UUID]*Miner),
 			MinerStatusManager: NewMinerManager(),
 		}
 	})
 	return instanceMinerFactory
 }
 
-func (factory *MinerFactory) CreateMiners(miners []*TMiner) {
+func (factory *MinerFactory) CreateMiners(miners []*Miner) {
 	for _, miner := range miners {
 		fmt.Println("create miner", miner.Ip)
 		factory.Miners[miner.Id] = miner
@@ -375,7 +375,7 @@ func (factory *MinerFactory) CreateMiners(miners []*TMiner) {
 			ant := NewAntMinerClient(miner)
 			miner.Behavior = ant
 		case AvalonMinerBrand:
-			avalon := AvalonMiner{TMiner: *miner}
+			avalon := AvalonMiner{Miner: *miner}
 			miner.Behavior = &avalon
 		}
 
@@ -383,7 +383,7 @@ func (factory *MinerFactory) CreateMiners(miners []*TMiner) {
 	}
 }
 
-func (factory *MinerFactory) GetMiner(id uuid.UUID) *TMiner {
+func (factory *MinerFactory) GetMiner(id uuid.UUID) *Miner {
 	return factory.Miners[id]
 }
 
