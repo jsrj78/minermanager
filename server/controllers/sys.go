@@ -1,16 +1,33 @@
 package controllers
 
 import (
+	"fmt"
 	"mmserver/models"
 	"mmserver/services"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 var lineService = services.LineService{}
 
 type SysController struct {
 	BaseController
+}
+
+func (this *SysController) Test(c *gin.Context) {
+	fmt.Println("test")
+	miner := models.TMiner{}
+	miner.Ip = "10.5.5.1"
+	miner.Brand = models.AntMinerBrand
+	miner.Id = uuid.New()
+	_, err := lineService.CreateMiner(miner)
+	if err != nil {
+		this.ResponseError(c, err.Error())
+		return
+	}
+
+	this.ResponseSuccess(c, nil)
 }
 
 // 按照规则添加矿机货架

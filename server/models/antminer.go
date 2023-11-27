@@ -58,7 +58,7 @@ func NewAntMinerClient(m *Miner) *AntMiner {
 
 	antMiner := &AntMiner{}
 	antMiner.Miner = *m
-	fmt.Println("user,password", antMiner.UserName, antMiner.Password)
+	//fmt.Println("user,password", antMiner.UserName, antMiner.Password)
 	antMiner.RequestClient = http.Client{Transport: &digest.Transport{
 		Username: antMiner.UserName,
 		Password: antMiner.Password,
@@ -77,9 +77,11 @@ func (ant *AntMiner) Login() bool {
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		fmt.Println("HTTP响应状态不是OK:", res.Status)
+		//fmt.Println("HTTP响应状态不是OK:",ant.Ip, res.Status)
 
 		return false
+	}else{
+		//fmt.Println("HTTP  OK:",ant.Ip, res.Status)
 	}
 
 	// 使用json.Unmarshal解码JSON响应并将其赋值给结构体
@@ -88,7 +90,7 @@ func (ant *AntMiner) Login() bool {
 		fmt.Println("JSON解码失败:", err)
 		return false
 	}
-	fmt.Println(ant.Miner.Ip, ant.Miner.Gateway)
+	//fmt.Println(ant.Miner.Ip, ant.Miner.Gateway)
 
 	return true
 }

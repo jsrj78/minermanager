@@ -12,19 +12,20 @@
 package models
 
 import (
-	"context"
 	"database/sql/driver"
 	"fmt"
 	"net/http"
+	"os/exec"
+	"runtime"
+	"strings"
 	"sync"
 	"time"
 
-	"github.com/go-ping/ping"
 	"github.com/google/uuid"
 	"golang.org/x/time/rate"
 )
 
-const pingInterval = 30 * time.Second
+const pingInterval = 60 * time.Second
 
 type MinerStatus int
 
@@ -126,11 +127,11 @@ func (ms MinerBrand) Value() (driver.Value, error) {
 
 func (ms *MinerBrand) Scan(value interface{}) error {
 	switch value.(string) {
-	case "antMiner":
+	case "AntMiner":
 		*ms = AntMinerBrand
-	case "whatsMiner":
+	case "WhatsMiner":
 		*ms = WhatsMinerBrand
-	case "avalonMiner":
+	case "AvalonMiner":
 		*ms = AvalonMinerBrand
 	default:
 		return fmt.Errorf("unsupported value for MinerBrand: %v", value)
@@ -234,7 +235,6 @@ type MinerStatusManager struct {
 // 矿机行为接口
 type MinerBehavior interface {
 	Run(manager *MinerStatusManager)
-	Ping() bool
 	Login() bool
 	Sleep() bool
 
@@ -260,27 +260,30 @@ type MinerFactory struct {
 }
 
 // 执行这个ping函数需要root或管理员权限
-func (miner *Miner) Ping() bool {
-	ctx := context.Background()
-	limiter.Wait(ctx)
+func (miner *Miner) ping() (bool, error) {
+	var cmd *exec.Cmd
 
-	pinger, err := ping.NewPinger(miner.Ip)
-	pinger.Timeout = time.Second * 5
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("ping", "-n", "3", miner.Ip)
+	case "linux":
+		cmd = exec.Command("ping", "-c", "3", miner.Ip)
+	default:
+		return false, fmt.Errorf("unsupported operating system")
+	}
+
+	output, err := cmd.CombinedOutput()
 	if err != nil {
-		fmt.Printf("ERROR: %s\n", err.Error())
-		return false
+		//fmt.Println("Command failed:", err)
+		return false, err
 	}
-	pinger.Count = 1 // 发送1个 ICMP Echo Request 包
-	pinger.Run()     // 开始 ping
-	stats := pinger.Statistics()
 
-	if stats.PacketsRecv > 0 {
-		//fmt.Println("Ping successful!")
-		return true
-	} else {
-		//fmt.Println("Ping failed!")
-		return false
-	}
+	//fmt.Println("Command output:", string(output))
+
+	successful := strings.Contains(string(output), "Lost = 0") &&
+		strings.Contains(string(output), "Received = 3")
+
+	return successful, nil
 }
 
 func (miner *Miner) Login() bool {
@@ -301,19 +304,19 @@ func (miner *Miner) Run(manager *MinerStatusManager) {
 			select {
 			case <-ticker.C:
 				//fmt.Println("start to ping", miner.Ip)
-				if miner.Ping() {
-					fmt.Println("ping successful", miner.Ip)
-					//即使ping成功，也有可能控制板故障或密码错误登录不了机器
+				go func() {
+					_, err := miner.ping()
+					if err != nil {
+						//fmt.Println("ping fail", miner.Ip, err.Error())
+						miner.Status = MinerOffline
+					} else {
+						miner.Status = MinerOnline
+						miner.Behavior.Login()
+					}
 
-					miner.Behavior.Login()
-
-					miner.Status = MinerOnline
-				} else {
-					fmt.Println("ping failed", miner.Ip)
-					miner.Status = MinerOffline
-				}
-
-				manager.ChangeState(miner, miner.Status)
+					// 处理结果
+					manager.ChangeState(miner, miner.Status)
+				}()
 
 			case <-miner.StopCh:
 				return
@@ -367,7 +370,7 @@ func NewMinerFactory() *MinerFactory {
 
 func (factory *MinerFactory) CreateMiners(miners []*Miner) {
 	for _, miner := range miners {
-		fmt.Println("create miner", miner.Ip)
+		//fmt.Println("create miner", miner.Ip)
 		factory.Miners[miner.Id] = miner
 
 		switch miner.Brand {

@@ -11,7 +11,10 @@
 package services
 
 import (
+	"fmt"
 	"mmserver/utils"
+	"strings"
+	"time"
 
 	"mmserver/models"
 
@@ -24,11 +27,65 @@ type MinerService struct {
 
 // StartMiner
 func (ms *MinerService) LoadMinerAndStart() error {
-	miners := []*models.Miner{}
-	//1. 获取所有矿机
-	if err := utils.DB.Where("status = ? or status = ? ", models.MinerOffline, models.MinerOnline).Find(&miners).Error; err == nil {
+	dbminer := []models.TMiner{}
+	//1. 获取在线和离线矿机
+	if err := utils.DB.Where("status = ? or status = ? ", models.MinerOffline, models.MinerOnline).Find(&dbminer).Error; err == nil {
+
+		miners := []*models.Miner{}
+
+		for _, miner := range dbminer {
+			m := models.Miner{
+				Id:              miner.Id,
+				Ip:              miner.Ip,
+				Brand:           miner.Brand,
+				UserName:        miner.Username,
+				Password:        miner.Password,
+				DefaultUserName: miner.DefaultUsername,
+				DefaultPassword: miner.DefaultPassword,
+				Status:          miner.Status,
+			}
+			miners = append(miners, &m)
+		}
+
 		f := models.NewMinerFactory()
 		f.CreateMiners(miners)
+		go func() {
+			for {
+				// 存储第3位相等的IP地址的和
+				ipSum := make(map[string]int)
+
+				//fmt.Println(ipSum)
+
+				fmt.Println(f.MinerStatusManager.OfflineList)
+				// 遍历 OfflineList
+				for _, ip := range f.MinerStatusManager.OfflineList {
+					// 使用 strings.Split 函数拆分IP地址
+					parts := strings.Split(ip, ".")
+
+					// 检查是否有足够的位数
+					if len(parts) >= 3 {
+						// 获取第3位并将其添加到和中
+						thirdPart := parts[2]
+						ipSum[thirdPart] += 1
+					}
+				}
+
+				fmt.Println(ipSum)
+
+				// 遍历和，检查是否大于5，如果是则发送警告
+				for thirdPart, sum := range ipSum {
+					if sum > 12 {
+						fmt.Printf("警告：第3位为 %s 的IP地址总和超过10：%d\n", thirdPart, sum)
+						// 在这里添加发送警告的代码
+					}
+				}
+
+				// 1分钟循环一篇
+				time.Sleep(time.Second * 60)
+			}
+
+		}()
+
 	} else {
 		utils.Log.Error(err)
 		return err
@@ -58,7 +115,6 @@ func (ms *MinerService) LoadMinerAndStart() error {
 	return nil
 
 }
-
 
 /**************************以下是数据库操作部分*************************/
 

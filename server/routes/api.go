@@ -19,5 +19,7 @@ import (
 var userCtrl controllers.UserController
 
 func InitApiRouterGroup(r *gin.RouterGroup) {
+
+	r.GET("/test", SysController.Test)
 	r.GET("/user", userCtrl.GetAllUserByPage)
 }
