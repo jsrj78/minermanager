@@ -53,6 +53,7 @@ const (
 type Config struct {
 	Mode    Environment `json:"mode"`
 	IsDebug bool        `json:"isDebug"`
+	BotKey  string      `json:"botKey"`
 	// 服务器配置
 	Api ApiServer `json:"apiServer"`
 	// 数据库配置

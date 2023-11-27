@@ -1,5 +1,6 @@
 {
     "mode": "development",
+    "botKey":"6370023079:AAHnSo3TzXxDbvVTlU5sFkkv4ayebkpGZO4",
     "isdebug": true,
     "apiServer": {
         "host": "127.0.0.1",

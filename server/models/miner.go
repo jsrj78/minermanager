@@ -12,6 +12,7 @@
 package models
 
 import (
+	"context"
 	"database/sql/driver"
 	"fmt"
 	"net/http"
@@ -33,6 +34,8 @@ type HashBoardStatus int
 
 type MinerBrand int
 
+type FaultType int
+
 const (
 	MinerOnline  MinerStatus = 0
 	MinerOffline MinerStatus = 1
@@ -44,6 +47,13 @@ const (
 	BoardDisconnect HashBoardStatus = 2
 	BoardEmpty      HashBoardStatus = 3
 	BoardRepair     HashBoardStatus = 4
+
+	FaultFans         FaultType = 0
+	FaultHashBoard    FaultType = 1
+	FaultPower        FaultType = 2
+	FaultControlBoard FaultType = 3
+	FaultNetwork      FaultType = 4
+	FaultUnknown      FaultType = 5
 
 	AntMinerBrand    MinerBrand = 0
 	WhatsMinerBrand  MinerBrand = 1
@@ -108,6 +118,39 @@ func (ms *HashBoardStatus) Scan(value interface{}) error {
 		*ms = BoardRepair
 	default:
 		return fmt.Errorf("unsupported value for HashBoardStatus: %v", value)
+	}
+	return nil
+}
+
+func (ms FaultType) String() string {
+	return [...]string{"fan", "hashboard", "controllerboard", "power", "network"}[ms]
+}
+
+func (ms FaultType) MarshalJSON() ([]byte, error) {
+	return []byte(`"` + ms.String() + `"`), nil
+}
+
+// GORM custom data type for saving as string in DB
+func (ms FaultType) Value() (driver.Value, error) {
+	return ms.String(), nil
+}
+
+func (ms *FaultType) Scan(value interface{}) error {
+	switch value.(string) {
+	case "fan":
+		*ms = FaultFans
+	case "hashboard":
+		*ms = FaultHashBoard
+	case "controllerboard":
+		*ms = FaultControlBoard
+	case "power":
+		*ms = FaultPower
+	case "network":
+		*ms = FaultNetwork
+	case "unknown":
+		*ms = FaultUnknown
+	default:
+		return fmt.Errorf("unsupported value for FaultType: %v", value)
 	}
 	return nil
 }
@@ -219,7 +262,15 @@ type Miner struct {
 	Behavior MinerBehavior `json:"behavior" gorm:"-"` //矿机行为
 
 	StopCh        chan bool   `json:"stopCh" gorm:"-"`        //矿机停止通道
-	RequestClient http.Client `json:"requestclient" gorm:"-"` //矿机请求客户端
+	RequestClient http.Client `json:"requestclient" gorm:"-"` //矿机Http请求客户端
+}
+
+type MinerFault struct {
+	Id        uuid.UUID   `json:"id"`         //故障ID
+	Ip        string      `json:"ip" `        //矿机IP
+	FaultType FaultType   `json:"faultType" ` //故障类型
+	Content   interface{} `json:"content"`    //故障内容
+	Memo      string      `json:"memo"`       //备注
 }
 
 var instanceMinerStatus *MinerStatusManager
@@ -230,12 +281,14 @@ type MinerStatusManager struct {
 	Mux         sync.Mutex
 	OnlineList  map[uuid.UUID]string
 	OfflineList map[uuid.UUID]string
+	FaultList   map[uuid.UUID]interface{}
 }
 
 // 矿机行为接口
 type MinerBehavior interface {
 	Run(manager *MinerStatusManager)
 	Login() bool
+	Normal() bool
 	Sleep() bool
 
 	// Ping() bool
@@ -311,10 +364,22 @@ func (miner *Miner) Run(manager *MinerStatusManager) {
 						miner.Status = MinerOffline
 					} else {
 						miner.Status = MinerOnline
-						miner.Behavior.Login()
+						//在线状态下，判断是否登录成功
+						if miner.Behavior.Login() {
+							if miner.Behavior.Normal() {
+								//整机运行正常，但是也有可能缺少Hash板，或者部分Hash板故障
+
+							} else {
+								// 错误检查
+							}
+						} else {
+							//错误监测
+
+						}
+
 					}
 
-					// 处理结果
+					// 处理结果离线在线结果
 					manager.ChangeState(miner, miner.Status)
 				}()
 
@@ -369,7 +434,17 @@ func NewMinerFactory() *MinerFactory {
 }
 
 func (factory *MinerFactory) CreateMiners(miners []*Miner) {
+	// 创建一个每秒产生3个令牌的限速器
+	limiter := rate.NewLimiter(500, 1)
+
 	for _, miner := range miners {
+
+		err := limiter.Wait(context.Background())
+		if err != nil {
+			fmt.Println("Error waiting for token:", err)
+			return
+		}
+
 		//fmt.Println("create miner", miner.Ip)
 		factory.Miners[miner.Id] = miner
 
@@ -378,8 +453,8 @@ func (factory *MinerFactory) CreateMiners(miners []*Miner) {
 			ant := NewAntMinerClient(miner)
 			miner.Behavior = ant
 		case AvalonMinerBrand:
-			avalon := AvalonMiner{Miner: *miner}
-			miner.Behavior = &avalon
+			avalon := NewAvalonMinerClient(miner)
+			miner.Behavior = avalon
 		}
 
 		miner.Run(factory.MinerStatusManager)

@@ -22,8 +22,9 @@ type AvalonMiner struct {
 	Miner
 }
 
-func NewAvalonMinerClient() *AvalonMiner {
+func NewAvalonMinerClient(m *Miner) *AvalonMiner {
 	avalonMiner := &AvalonMiner{}
+	avalonMiner.Miner = *m
 	avalonMiner.RequestClient = http.Client{Transport: &digest.Transport{
 		Username: avalonMiner.UserName,
 		Password: avalonMiner.Password,
@@ -33,6 +34,15 @@ func NewAvalonMinerClient() *AvalonMiner {
 }
 
 func (avalon *AvalonMiner) Login() bool {
+
+	//fmt.Println("avalon miner reboot")
+
+	fmt.Println("avalon", avalon.Ip)
+
+	return false
+}
+
+func (avalon *AvalonMiner) Normal() bool {
 
 	//fmt.Println("avalon miner reboot")
 

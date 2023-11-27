@@ -80,7 +80,7 @@ func (ant *AntMiner) Login() bool {
 		//fmt.Println("HTTP响应状态不是OK:",ant.Ip, res.Status)
 
 		return false
-	}else{
+	} else {
 		//fmt.Println("HTTP  OK:",ant.Ip, res.Status)
 	}
 
@@ -92,6 +92,10 @@ func (ant *AntMiner) Login() bool {
 	}
 	//fmt.Println(ant.Miner.Ip, ant.Miner.Gateway)
 
+	return true
+}
+
+func (ant *AntMiner) Normal() bool {
 	return true
 }
 
