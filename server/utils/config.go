@@ -2,7 +2,7 @@
  * @Author: chunhua yang
  * @Date: 2023-10-22 20:53:54
  * @LastEditors: Max jsrj78@gmail.com
- * @LastEditTime: 2023-10-23 22:14:08
+ * @LastEditTime: 2023-11-27 22:22:13
  * @FilePath: /minermanager/server/utils/config.go
  * @Description:
  *
@@ -42,6 +42,12 @@ type PostgresServer struct {
 	Password string `json:"password"`
 }
 
+type SMSGateway struct {
+	AccountsID  string `json:"accountsid"`
+	Token       string `json:"token"`
+	PhoneNumber string `json:"phonenumber"`
+}
+
 type Environment string
 
 const (
@@ -60,6 +66,7 @@ type Config struct {
 	Postgres PostgresServer `json:"dbServer"`
 	// Redis配置
 	Redis RedisServer `json:"redisServer"`
+	SMSGateway SMSGateway `json:"smsGateway"`
 }
 
 var (

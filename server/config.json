@@ -19,5 +19,10 @@
         "user": "postgres",
         "password": "123456",
         "dbName": "minerdb"
+    },
+    "smsGateway":{
+        "accountsid":"ACd112de3d05ccbff0b0927c71eb4690b1",
+        "token":"c615da7fd453b3cc9d8561f847933717",
+        "phonenumber":"+19498228781"
     }
 }
